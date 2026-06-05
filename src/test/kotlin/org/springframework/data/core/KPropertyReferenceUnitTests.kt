@@ -50,6 +50,38 @@ class KPropertyReferenceUnitTests {
 		assertThat(path.toDotPath()).isEqualTo("addresses.city")
 	}
 
+	@Test // GH-XXXX
+	fun shouldComposeTypedPropertyPathPath() {
+
+		val path = TypedPropertyPath.path(Person::address).then(Address::city)
+
+		assertThat(path.toDotPath()).isEqualTo("address.city")
+	}
+
+	@Test // GH-XXXX
+	fun shouldComposeKPropertyReferenceProperty() {
+
+		val path = PropertyReference.property(Person::address).then(Address::city)
+
+		assertThat(path.toDotPath()).isEqualTo("address.city")
+	}
+
+	@Test // GH-XXXX
+	fun shouldComposeCollectionPropertyPath() {
+
+		val path = TypedPropertyPath.path(Person::addresses).then(Address::street)
+
+		assertThat(path.toDotPath()).isEqualTo("addresses.street")
+	}
+
+	@Test // GH-XXXX
+	fun shouldComposeMultipleLevels() {
+
+		val path = TypedPropertyPath.path(Person::address).then(Address::country).then(Country::name)
+
+		assertThat(path.toDotPath()).isEqualTo("address.country.name")
+	}
+
 	@Test // GH-3400
 	fun composedReferenceCreationShouldFail() {
 		assertThatExceptionOfType(PropertyResolutionException::class.java).isThrownBy {

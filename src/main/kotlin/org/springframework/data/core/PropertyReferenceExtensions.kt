@@ -30,9 +30,9 @@ import kotlin.reflect.jvm.javaGetter
  *
  * @since 4.1
  */
-fun <T : Any, P : Any, N : Any> PropertyReference<T, P>.then(next: KProperty1<T, P?>): TypedPropertyPath<T, N> {
-	val nextPath = KPropertyReference.of<T, P>(next) as PropertyReference<P, N>
-	return TypedPropertyPaths.compose(this, nextPath)
+fun <T : Any, P : Any, N : Any> PropertyReference<T, P>.then(next: KProperty1<P, N?>): TypedPropertyPath<T, N> {
+	val nextPath = KPropertyReference.of<P, N>(next)
+	return TypedPropertyPaths.compose(this, nextPath as PropertyReference<P, N>)
 }
 
 /**
@@ -40,9 +40,87 @@ fun <T : Any, P : Any, N : Any> PropertyReference<T, P>.then(next: KProperty1<T,
  *
  * @since 4.1
  */
-fun <T : Any, P : Any, N : Any> PropertyReference<T, P>.then(next: KProperty<P?>): TypedPropertyPath<T, N> {
-	val nextPath = KPropertyReference.of<T, P>(next) as PropertyReference<P, N>
-	return TypedPropertyPaths.compose(this, nextPath)
+fun <T : Any, P : Any, N : Any> PropertyReference<T, P>.then(next: KProperty<N?>): TypedPropertyPath<T, N> {
+	val nextPath = KPropertyReference.of<P, N>(next)
+	return TypedPropertyPaths.compose(this, nextPath as PropertyReference<P, N>)
+}
+
+/**
+ * Extension function to compose a [TypedPropertyPath] with a [KProperty1].
+ *
+ * @since 4.1
+ */
+fun <T : Any, P : Any, N : Any> TypedPropertyPath<T, P>.then(next: KProperty1<P, N?>): TypedPropertyPath<T, N> {
+	val nextPath = KPropertyReference.of<P, N>(next)
+	return TypedPropertyPaths.compose(this, nextPath as PropertyReference<P, N>)
+}
+
+/**
+ * Extension function to compose a [TypedPropertyPath] with a [KProperty].
+ *
+ * @since 4.1
+ */
+fun <T : Any, P : Any, N : Any> TypedPropertyPath<T, P>.then(next: KProperty<N?>): TypedPropertyPath<T, N> {
+	val nextPath = KPropertyReference.of<P, N>(next)
+	return TypedPropertyPaths.compose(this, nextPath as PropertyReference<P, N>)
+}
+
+/**
+ * Extension function to compose a [TypedPropertyPath] with a collection [KProperty1].
+ *
+ * @since 4.1
+ */
+fun <T : Any, P : Any, N : Any> PropertyReference<T, P>.thenMany(next: KProperty1<P, Iterable<N?>?>): TypedPropertyPath<T, N> {
+	val nextPath = KPropertyReference.ofMany<P, N>(next)
+	return TypedPropertyPaths.compose(this, nextPath as PropertyReference<P, N>)
+}
+
+/**
+ * Extension function to compose a [TypedPropertyPath] with a collection [KProperty1].
+ *
+ * @since 4.1
+ */
+fun <T : Any, P : Any, N : Any> TypedPropertyPath<T, P>.thenMany(next: KProperty1<P, Iterable<N?>?>): TypedPropertyPath<T, N> {
+	val nextPath = KPropertyReference.ofMany<P, N>(next)
+	return TypedPropertyPaths.compose(this, nextPath as PropertyReference<P, N>)
+}
+
+/**
+ * Create a [PropertyReference] from a [KProperty1] reference.
+ *
+ * @since 4.1
+ */
+fun <T : Any, P : Any> PropertyReference.Companion.property(property: KProperty1<T, P?>): PropertyReference<T, P> {
+	return KPropertyReference.of(property)
+}
+
+/**
+ * Create a [PropertyReference] from a collection [KProperty1] reference.
+ *
+ * @since 4.1
+ */
+@JvmName("propertyMany")
+fun <T : Any, P : Any> PropertyReference.Companion.property(property: KProperty1<T, Iterable<P?>?>): PropertyReference<T, P> {
+	return KPropertyReference.ofMany(property)
+}
+
+/**
+ * Create a [TypedPropertyPath] from a [KProperty1] reference.
+ *
+ * @since 4.1
+ */
+fun <T : Any, P : Any> TypedPropertyPath.Companion.path(property: KProperty1<T, P?>): TypedPropertyPath<T, P> {
+	return TypedPropertyPaths.of(KPropertyReference.of(property))
+}
+
+/**
+ * Create a [TypedPropertyPath] from a collection [KProperty1] reference.
+ *
+ * @since 4.1
+ */
+@JvmName("pathMany")
+fun <T : Any, P : Any> TypedPropertyPath.Companion.path(property: KProperty1<T, Iterable<P?>?>): TypedPropertyPath<T, P> {
+	return TypedPropertyPaths.of(KPropertyReference.ofMany(property))
 }
 
 /**
