@@ -46,10 +46,10 @@ import org.springframework.data.util.Streamable;
 class WindowIteratorUnitTests {
 
 	@Test // GH-2151
-	void loadsDataOnNext() {
+	void loadsDataOnNextWithDefaultOffsetStart() {
 
 		Function<ScrollPosition, Window<String>> fkt = mock(Function.class);
-		WindowIterator<String> iterator = WindowIterator.of(fkt).startingAt(ScrollPosition.offset());
+		WindowIterator<String> iterator = WindowIterator.of(fkt).startingAtOffset();
 		verifyNoInteractions(fkt);
 
 		when(fkt.apply(any())).thenReturn(Window.from(Collections.emptyList(), value -> ScrollPosition.offset()));
@@ -129,6 +129,26 @@ class WindowIteratorUnitTests {
 		}
 
 		assertThat(capturedResult).containsExactly("a", "b", "c", "d");
+	}
+
+	@Test // GH-2151
+	void defaultOffsetStartYieldsSameResultsAsExplicitOffsetStart() {
+
+		Window<String> window1 = Window.from(List.of("a", "b"), ScrollPosition::offset, true);
+		Window<String> window2 = Window.from(List.of("c", "d"), value -> ScrollPosition.offset(2 + value));
+		Function<ScrollPosition, Window<String>> windowFunction = it -> {
+			if (it.isInitial()) {
+				return window1;
+			}
+
+			return window2;
+		};
+
+		List<String> defaultStartResult = Streamable.of(() -> WindowIterator.of(windowFunction).startingAtOffset()).toList();
+		List<String> explicitStartResult = Streamable.of(() -> WindowIterator.of(windowFunction).startingAt(ScrollPosition.offset()))
+				.toList();
+
+		assertThat(defaultStartResult).containsExactlyElementsOf(explicitStartResult);
 	}
 
 	@Test // GH-2151, GH-2857

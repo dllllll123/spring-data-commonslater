@@ -145,6 +145,10 @@ public class WindowIterator<T> implements Iterator<T> {
 			this.windowFunction = windowFunction;
 		}
 
+		public WindowIterator<T> startingAtOffset() {
+			return startingAt(ScrollPosition.offset());
+		}
+
 		/**
 		 * Create a {@link WindowIterator} given {@link ScrollPosition}.
 		 *
