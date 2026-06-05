@@ -26,22 +26,22 @@ import kotlin.reflect.jvm.javaField
 import kotlin.reflect.jvm.javaGetter
 
 /**
- * Extension function to compose a [TypedPropertyPath] with a [KProperty1].
+ * Extension function to compose a [PropertyReference] with a [KProperty1].
  *
  * @since 4.1
  */
-fun <T : Any, P : Any, N : Any> PropertyReference<T, P>.then(next: KProperty1<T, P?>): TypedPropertyPath<T, N> {
-	val nextPath = KPropertyReference.of<T, P>(next) as PropertyReference<P, N>
+fun <T : Any, P : Any, N : Any> PropertyReference<T, P>.then(next: KProperty1<P, N?>): TypedPropertyPath<T, N> {
+	val nextPath = KPropertyReference.of<P, N>(next) as PropertyReference<P, N>
 	return TypedPropertyPaths.compose(this, nextPath)
 }
 
 /**
- * Extension function to compose a [TypedPropertyPath] with a [KProperty].
+ * Extension function to compose a [PropertyReference] with a [KProperty].
  *
  * @since 4.1
  */
-fun <T : Any, P : Any, N : Any> PropertyReference<T, P>.then(next: KProperty<P?>): TypedPropertyPath<T, N> {
-	val nextPath = KPropertyReference.of<T, P>(next) as PropertyReference<P, N>
+fun <T : Any, P : Any, N : Any> PropertyReference<T, P>.then(next: KProperty<N?>): TypedPropertyPath<T, N> {
+	val nextPath = KPropertyReference.of<P, N>(next) as PropertyReference<P, N>
 	return TypedPropertyPaths.compose(this, nextPath)
 }
 

@@ -1,0 +1,79 @@
+diff --git a/src/main/kotlin/org/springframework/data/core/PropertyReferenceExtensions.kt b/src/main/kotlin/org/springframework/data/core/PropertyReferenceExtensions.kt
+index 0d2003ba..7882dce4 100644
+--- a/src/main/kotlin/org/springframework/data/core/PropertyReferenceExtensions.kt
++++ b/src/main/kotlin/org/springframework/data/core/PropertyReferenceExtensions.kt
+@@ -26,22 +26,22 @@ import kotlin.reflect.jvm.javaField
+ import kotlin.reflect.jvm.javaGetter
+ 
+ /**
+- * Extension function to compose a [TypedPropertyPath] with a [KProperty1].
++ * Extension function to compose a [PropertyReference] with a [KProperty1].
+  *
+  * @since 4.1
+  */
+-fun <T : Any, P : Any, N : Any> PropertyReference<T, P>.then(next: KProperty1<T, P?>): TypedPropertyPath<T, N> {
+-	val nextPath = KPropertyReference.of<T, P>(next) as PropertyReference<P, N>
++fun <T : Any, P : Any, N : Any> PropertyReference<T, P>.then(next: KProperty1<P, N?>): TypedPropertyPath<T, N> {
++	val nextPath = KPropertyReference.of<P, N>(next) as PropertyReference<P, N>
+ 	return TypedPropertyPaths.compose(this, nextPath)
+ }
+ 
+ /**
+- * Extension function to compose a [TypedPropertyPath] with a [KProperty].
++ * Extension function to compose a [PropertyReference] with a [KProperty].
+  *
+  * @since 4.1
+  */
+-fun <T : Any, P : Any, N : Any> PropertyReference<T, P>.then(next: KProperty<P?>): TypedPropertyPath<T, N> {
+-	val nextPath = KPropertyReference.of<T, P>(next) as PropertyReference<P, N>
++fun <T : Any, P : Any, N : Any> PropertyReference<T, P>.then(next: KProperty<N?>): TypedPropertyPath<T, N> {
++	val nextPath = KPropertyReference.of<P, N>(next) as PropertyReference<P, N>
+ 	return TypedPropertyPaths.compose(this, nextPath)
+ }
+ 
+diff --git a/src/test/kotlin/org/springframework/data/core/TypedPropertyPathKtUnitTests.kt b/src/test/kotlin/org/springframework/data/core/TypedPropertyPathKtUnitTests.kt
+index 2d2861aa..4a5c2946 100644
+--- a/src/test/kotlin/org/springframework/data/core/TypedPropertyPathKtUnitTests.kt
++++ b/src/test/kotlin/org/springframework/data/core/TypedPropertyPathKtUnitTests.kt
+@@ -114,17 +114,41 @@ class TypedPropertyPathKtUnitTests {
+ 		assertThat(otherPath.toDotPath()).isEqualTo("address.city")
+ 	}
+ 
++	@Test // GH-3400
++	fun shouldSupportKPropertyReferenceComposition() {
++
++		val ref = KPropertyReference.of(Person::address)
++		val path = ref.then(Address::city)
++		assertThat(path.toDotPath()).isEqualTo("address.city")
++	}
++
++	@Test // GH-3400
++	fun shouldSupportManyComposition() {
++
++		val path = TypedPropertyPath.ofMany(Person::addresses).then(Address::city)
++		assertThat(path.toDotPath()).isEqualTo("addresses.city")
++	}
++
++	@Test // GH-3400
++	fun shouldSupportThenManyComposition() {
++
++		val path = TypedPropertyPath.path(Person::address).thenMany(Address::people)
++		assertThat(path.toDotPath()).isEqualTo("address.people")
++	}
++
+ 	class Person {
+ 		var name: String? = null
+ 		var age: Int = 0
+ 		var address: Address? = null
+ 		var emergencyContact: Person? = null
++		var addresses: List<Address> = emptyList()
+ 	}
+ 
+ 	class Address {
+ 		var city: String? = null
+ 		var street: String? = null
+ 		var country: Country? = null
++		var people: List<Person> = emptyList()
+ 	}
+ 
+ 	data class Country(val name: String)

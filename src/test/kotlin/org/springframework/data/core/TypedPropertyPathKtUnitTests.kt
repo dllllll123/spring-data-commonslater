@@ -114,17 +114,41 @@ class TypedPropertyPathKtUnitTests {
 		assertThat(otherPath.toDotPath()).isEqualTo("address.city")
 	}
 
+	@Test // GH-3400
+	fun shouldSupportKPropertyReferenceComposition() {
+
+		val ref = KPropertyReference.of(Person::address)
+		val path = ref.then(Address::city)
+		assertThat(path.toDotPath()).isEqualTo("address.city")
+	}
+
+	@Test // GH-3400
+	fun shouldSupportManyComposition() {
+
+		val path = TypedPropertyPath.ofMany(Person::addresses).then(Address::city)
+		assertThat(path.toDotPath()).isEqualTo("addresses.city")
+	}
+
+	@Test // GH-3400
+	fun shouldSupportThenManyComposition() {
+
+		val path = TypedPropertyPath.path(Person::address).thenMany(Address::people)
+		assertThat(path.toDotPath()).isEqualTo("address.people")
+	}
+
 	class Person {
 		var name: String? = null
 		var age: Int = 0
 		var address: Address? = null
 		var emergencyContact: Person? = null
+		var addresses: List<Address> = emptyList()
 	}
 
 	class Address {
 		var city: String? = null
 		var street: String? = null
 		var country: Country? = null
+		var people: List<Person> = emptyList()
 	}
 
 	data class Country(val name: String)
