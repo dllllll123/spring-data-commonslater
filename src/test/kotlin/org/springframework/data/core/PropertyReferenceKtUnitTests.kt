@@ -37,10 +37,29 @@ class PropertyReferenceKtUnitTests {
 			.isThrownBy { PropertyReference.property(Person::address / Address::city) }
 	}
 
+	@Test
+	fun typedPropertyPathShouldCompose() {
+		val path = TypedPropertyPath.path(Person::address).then(Address::city)
+		assertThat(path.toDotPath()).isEqualTo("address.city")
+	}
+
+	@Test
+	fun kPropertyReferenceShouldCompose() {
+		val path = KPropertyReference.of(Person::address).then(Address::city)
+		assertThat(path.toDotPath()).isEqualTo("address.city")
+	}
+
+	@Test
+	fun collectionPropertyPathShouldCompose() {
+		val path = KPropertyReference.of(Person::addresses).then(Address::city)
+		assertThat(path.toDotPath()).isEqualTo("addresses.city")
+	}
+
 	class Person {
 		var name: String? = null
 		var age: Int = 0
 		var address: Address? = null
+		var addresses: List<Address> = emptyList()
 	}
 
 	class Address {
