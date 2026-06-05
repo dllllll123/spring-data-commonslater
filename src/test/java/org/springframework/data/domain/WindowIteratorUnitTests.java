@@ -154,4 +154,46 @@ class WindowIteratorUnitTests {
 		List<String> items = Streamable.of(() -> iterator).toList();
 		assertThat(items).containsExactly("d", "c", "b", "a");
 	}
+
+	@Test
+	void startingAtOffsetDelaysFirstWindowLoad() {
+
+		Function<ScrollPosition, Window<String>> fkt = mock(Function.class);
+		WindowIterator<String> iterator = WindowIterator.of(fkt).startingAtOffset();
+		verifyNoInteractions(fkt);
+
+		when(fkt.apply(any())).thenReturn(Window.from(Collections.emptyList(), value -> ScrollPosition.offset()));
+
+		iterator.hasNext();
+		verify(fkt).apply(ScrollPosition.offset());
+	}
+
+	@Test
+	void startingAtOffsetYieldsSameResultsAsExplicitOffset() {
+
+		Window<String> window1 = Window.from(List.of("a", "b"), ScrollPosition::offset, true);
+		Window<String> window2 = Window.from(List.of("c", "d"), value -> ScrollPosition.offset(2 + value));
+		Function<ScrollPosition, Window<String>> windowFunction = it -> {
+			if (it.isInitial()) {
+				return window1;
+			}
+			return window2;
+		};
+
+		WindowIterator<String> iteratorWithStartingAtOffset = WindowIterator.of(windowFunction).startingAtOffset();
+		WindowIterator<String> iteratorWithExplicitOffset = WindowIterator.of(windowFunction).startingAt(ScrollPosition.offset());
+
+		List<String> resultFromStartingAtOffset = new ArrayList<>();
+		while (iteratorWithStartingAtOffset.hasNext()) {
+			resultFromStartingAtOffset.add(iteratorWithStartingAtOffset.next());
+		}
+
+		List<String> resultFromExplicitOffset = new ArrayList<>();
+		while (iteratorWithExplicitOffset.hasNext()) {
+			resultFromExplicitOffset.add(iteratorWithExplicitOffset.next());
+		}
+
+		assertThat(resultFromStartingAtOffset).containsExactly("a", "b", "c", "d");
+		assertThat(resultFromStartingAtOffset).isEqualTo(resultFromExplicitOffset);
+	}
 }
