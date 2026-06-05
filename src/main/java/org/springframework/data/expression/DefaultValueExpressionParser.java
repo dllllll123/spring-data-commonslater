@@ -61,17 +61,25 @@ class DefaultValueExpressionParser implements ValueExpressionParser {
 			return new LiteralValueExpression(expressionString);
 		}
 
-		if (placerholderIndex != -1 && expressionIndex == -1
-				&& findPlaceholderEndIndex(expressionString, placerholderIndex) != expressionString.length()) {
+		if (isWholePlaceholder(expressionString, placerholderIndex, expressionIndex)) {
 			return createPlaceholder(expressionString);
 		}
 
-		if (placerholderIndex == -1
-				&& findPlaceholderEndIndex(expressionString, expressionIndex) != expressionString.length()) {
+		if (isWholeExpression(expressionString, placerholderIndex, expressionIndex)) {
 			return createExpression(expressionString);
 		}
 
 		return parseComposite(expressionString, placerholderIndex, expressionIndex);
+	}
+
+	private static boolean isWholePlaceholder(String expressionString, int placerholderIndex, int expressionIndex) {
+		return placerholderIndex != -1 && expressionIndex == -1
+				&& findPlaceholderEndIndex(expressionString, placerholderIndex) != expressionString.length();
+	}
+
+	private static boolean isWholeExpression(String expressionString, int placerholderIndex, int expressionIndex) {
+		return placerholderIndex == -1
+				&& findPlaceholderEndIndex(expressionString, expressionIndex) != expressionString.length();
 	}
 
 	private CompositeValueExpression parseComposite(String expressionString, int placerholderIndex, int expressionIndex) {
@@ -96,25 +104,11 @@ class DefaultValueExpressionParser implements ValueExpressionParser {
 			int afterClosingParenthesisIndex = endIndex + 1;
 			String part = expressionString.substring(startIndex, afterClosingParenthesisIndex);
 
-			if (part.startsWith(PLACEHOLDER_PREFIX)) {
-				expressions.add(createPlaceholder(part));
-			} else {
-				expressions.add(createExpression(part));
-			}
+			expressions.add(createExpressionNode(part));
 
-			placerholderIndex = expressionString.indexOf(PLACEHOLDER_PREFIX, endIndex);
-			expressionIndex = expressionString.indexOf(EXPRESSION_PREFIX, endIndex);
+			startIndex = findNextExpressionStart(expressionString, endIndex);
 
-			startIndex = getStartIndex(placerholderIndex, expressionIndex);
-
-			if (startIndex == -1) {
-				// no next expression but we're capturing everything after the expression as literal.
-				expressions.add(new LiteralValueExpression(expressionString.substring(afterClosingParenthesisIndex)));
-			} else {
-				// capture literal after the expression ends and before the next starts.
-				expressions
-						.add(new LiteralValueExpression(expressionString.substring(afterClosingParenthesisIndex, startIndex)));
-			}
+			appendLiteralTail(expressions, expressionString, afterClosingParenthesisIndex, startIndex);
 		}
 
 		return new CompositeValueExpression(expressionString, expressions);
@@ -123,6 +117,27 @@ class DefaultValueExpressionParser implements ValueExpressionParser {
 	private static int getStartIndex(int placerholderIndex, int expressionIndex) {
 		return placerholderIndex != -1 && expressionIndex != -1 ? Math.min(placerholderIndex, expressionIndex)
 				: placerholderIndex != -1 ? placerholderIndex : expressionIndex;
+	}
+
+	private ValueExpression createExpressionNode(String part) {
+		if (part.startsWith(PLACEHOLDER_PREFIX)) {
+			return createPlaceholder(part);
+		}
+		return createExpression(part);
+	}
+
+	private static int findNextExpressionStart(String expressionString, int endIndex) {
+		int placerholderIndex = expressionString.indexOf(PLACEHOLDER_PREFIX, endIndex);
+		int expressionIndex = expressionString.indexOf(EXPRESSION_PREFIX, endIndex);
+		return getStartIndex(placerholderIndex, expressionIndex);
+	}
+
+	private void appendLiteralTail(List<ValueExpression> expressions, String expressionString, int fromIndex, int toIndex) {
+		if (toIndex == -1) {
+			expressions.add(new LiteralValueExpression(expressionString.substring(fromIndex)));
+		} else {
+			expressions.add(new LiteralValueExpression(expressionString.substring(fromIndex, toIndex)));
+		}
 	}
 
 	private PlaceholderExpression createPlaceholder(String part) {
