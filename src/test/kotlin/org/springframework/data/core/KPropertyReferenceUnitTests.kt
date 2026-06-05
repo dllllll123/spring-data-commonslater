@@ -64,6 +64,72 @@ class KPropertyReferenceUnitTests {
 		}
 	}
 
+	@Test
+	fun shouldComposePropertyPathViaTypedPropertyPathThen() {
+		val path = TypedPropertyPath.path(Person::address).then(Address::city)
+
+		assertThat(path.toDotPath()).isEqualTo("address.city")
+		assertThat(path.owningType.type).isEqualTo(Person::class.java)
+	}
+
+	@Test
+	fun shouldComposeMultiLevelPropertyPathViaTypedPropertyPathThen() {
+		val path = TypedPropertyPath.path(Person::address)
+			.then(Address::country)
+			.then(Country::name)
+
+		assertThat(path.toDotPath()).isEqualTo("address.country.name")
+		assertThat(path.owningType.type).isEqualTo(Person::class.java)
+	}
+
+	@Test
+	fun shouldComposePropertyPathViaKPropertyReferenceThen() {
+		val addressRef = KPropertyReference.of(Person::address)
+		val path = addressRef.then(Address::city)
+
+		assertThat(path.toDotPath()).isEqualTo("address.city")
+		assertThat(path.owningType.type).isEqualTo(Person::class.java)
+	}
+
+	@Test
+	fun shouldComposeMultiLevelPropertyPathViaKPropertyReferenceThen() {
+		val path = KPropertyReference.of(Person::address)
+			.then(Address::country)
+			.then(Country::name)
+
+		assertThat(path.toDotPath()).isEqualTo("address.country.name")
+		assertThat(path.owningType.type).isEqualTo(Person::class.java)
+	}
+
+	@Test
+	fun shouldComposeCollectionPropertyPathViaKPropertyReferenceThen() {
+		val path = KPropertyReference.of(Person::addresses)
+			.then(Address::city)
+
+		assertThat(path.toDotPath()).isEqualTo("addresses.city")
+		assertThat(path.owningType.type).isEqualTo(Person::class.java)
+	}
+
+	@Test
+	fun shouldComposeMultiLevelCollectionPropertyPathViaKPropertyReferenceThen() {
+		val path = KPropertyReference.of(Person::addresses)
+			.then(Address::country)
+			.then(Country::name)
+
+		assertThat(path.toDotPath()).isEqualTo("addresses.country.name")
+		assertThat(path.owningType.type).isEqualTo(Person::class.java)
+	}
+
+	@Test
+	fun shouldComposeSelfReferencingPropertyPath() {
+		val path = KPropertyReference.of(Person::emergencyContact)
+			.then(Person::address)
+			.then(Address::city)
+
+		assertThat(path.toDotPath()).isEqualTo("emergencyContact.address.city")
+		assertThat(path.owningType.type).isEqualTo(Person::class.java)
+	}
+
 	class Person {
 		var name: String? = null
 		var age: Int = 0

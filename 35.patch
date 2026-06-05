@@ -1,0 +1,103 @@
+diff --git a/src/main/kotlin/org/springframework/data/core/PropertyReferenceExtensions.kt b/src/main/kotlin/org/springframework/data/core/PropertyReferenceExtensions.kt
+index 0d2003ba..4eb797b6 100644
+--- a/src/main/kotlin/org/springframework/data/core/PropertyReferenceExtensions.kt
++++ b/src/main/kotlin/org/springframework/data/core/PropertyReferenceExtensions.kt
+@@ -30,8 +30,8 @@ import kotlin.reflect.jvm.javaGetter
+  *
+  * @since 4.1
+  */
+-fun <T : Any, P : Any, N : Any> PropertyReference<T, P>.then(next: KProperty1<T, P?>): TypedPropertyPath<T, N> {
+-	val nextPath = KPropertyReference.of<T, P>(next) as PropertyReference<P, N>
++fun <T : Any, P : Any, N : Any> PropertyReference<T, P>.then(next: KProperty1<P, N?>): TypedPropertyPath<T, N> {
++	val nextPath = KPropertyReference.of<P, N>(next) as PropertyReference<P, N>
+ 	return TypedPropertyPaths.compose(this, nextPath)
+ }
+ 
+@@ -40,8 +40,8 @@ fun <T : Any, P : Any, N : Any> PropertyReference<T, P>.then(next: KProperty1<T,
+  *
+  * @since 4.1
+  */
+-fun <T : Any, P : Any, N : Any> PropertyReference<T, P>.then(next: KProperty<P?>): TypedPropertyPath<T, N> {
+-	val nextPath = KPropertyReference.of<T, P>(next) as PropertyReference<P, N>
++fun <T : Any, P : Any, N : Any> PropertyReference<T, P>.then(next: KProperty<N?>): TypedPropertyPath<T, N> {
++	val nextPath = KPropertyReference.of<P, N>(next) as PropertyReference<P, N>
+ 	return TypedPropertyPaths.compose(this, nextPath)
+ }
+ 
+diff --git a/src/test/kotlin/org/springframework/data/core/KPropertyReferenceUnitTests.kt b/src/test/kotlin/org/springframework/data/core/KPropertyReferenceUnitTests.kt
+index f8789acf..8bf23110 100644
+--- a/src/test/kotlin/org/springframework/data/core/KPropertyReferenceUnitTests.kt
++++ b/src/test/kotlin/org/springframework/data/core/KPropertyReferenceUnitTests.kt
+@@ -64,6 +64,72 @@ class KPropertyReferenceUnitTests {
+ 		}
+ 	}
+ 
++	@Test
++	fun shouldComposePropertyPathViaTypedPropertyPathThen() {
++		val path = TypedPropertyPath.path(Person::address).then(Address::city)
++
++		assertThat(path.toDotPath()).isEqualTo("address.city")
++		assertThat(path.owningType.type).isEqualTo(Person::class.java)
++	}
++
++	@Test
++	fun shouldComposeMultiLevelPropertyPathViaTypedPropertyPathThen() {
++		val path = TypedPropertyPath.path(Person::address)
++			.then(Address::country)
++			.then(Country::name)
++
++		assertThat(path.toDotPath()).isEqualTo("address.country.name")
++		assertThat(path.owningType.type).isEqualTo(Person::class.java)
++	}
++
++	@Test
++	fun shouldComposePropertyPathViaKPropertyReferenceThen() {
++		val addressRef = KPropertyReference.of(Person::address)
++		val path = addressRef.then(Address::city)
++
++		assertThat(path.toDotPath()).isEqualTo("address.city")
++		assertThat(path.owningType.type).isEqualTo(Person::class.java)
++	}
++
++	@Test
++	fun shouldComposeMultiLevelPropertyPathViaKPropertyReferenceThen() {
++		val path = KPropertyReference.of(Person::address)
++			.then(Address::country)
++			.then(Country::name)
++
++		assertThat(path.toDotPath()).isEqualTo("address.country.name")
++		assertThat(path.owningType.type).isEqualTo(Person::class.java)
++	}
++
++	@Test
++	fun shouldComposeCollectionPropertyPathViaKPropertyReferenceThen() {
++		val path = KPropertyReference.of(Person::addresses)
++			.then(Address::city)
++
++		assertThat(path.toDotPath()).isEqualTo("addresses.city")
++		assertThat(path.owningType.type).isEqualTo(Person::class.java)
++	}
++
++	@Test
++	fun shouldComposeMultiLevelCollectionPropertyPathViaKPropertyReferenceThen() {
++		val path = KPropertyReference.of(Person::addresses)
++			.then(Address::country)
++			.then(Country::name)
++
++		assertThat(path.toDotPath()).isEqualTo("addresses.country.name")
++		assertThat(path.owningType.type).isEqualTo(Person::class.java)
++	}
++
++	@Test
++	fun shouldComposeSelfReferencingPropertyPath() {
++		val path = KPropertyReference.of(Person::emergencyContact)
++			.then(Person::address)
++			.then(Address::city)
++
++		assertThat(path.toDotPath()).isEqualTo("emergencyContact.address.city")
++		assertThat(path.owningType.type).isEqualTo(Person::class.java)
++	}
++
+ 	class Person {
+ 		var name: String? = null
+ 		var age: Int = 0
