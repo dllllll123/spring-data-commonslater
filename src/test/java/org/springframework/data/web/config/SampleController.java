@@ -19,7 +19,9 @@ import static org.assertj.core.api.Assertions.*;
 
 import java.util.Collection;
 import java.util.Date;
+import java.util.Optional;
 
+import org.springframework.data.domain.OffsetScrollPosition;
 import org.springframework.data.web.ProjectedPayload;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.format.annotation.DateTimeFormat.ISO;
@@ -49,6 +51,20 @@ class SampleController {
 		assertThat(sampleDto.getBillingAddress().getZipCode()).isEqualTo("ZIP");
 		assertThat(sampleDto.getBillingAddress().getCity()).isEqualTo("City");
 
+		return "view";
+	}
+
+	@RequestMapping("/offset")
+	String offsetScrollPosition(OffsetScrollPosition position) {
+		assertThat(position).isNotNull();
+		assertThat(position.getOffset()).isEqualTo(5L);
+		return "view";
+	}
+
+	@RequestMapping("/optional-offset")
+	String optionalOffsetScrollPosition(Optional<OffsetScrollPosition> position) {
+		assertThat(position).isPresent();
+		assertThat(position.get().getOffset()).isEqualTo(5L);
 		return "view";
 	}
 

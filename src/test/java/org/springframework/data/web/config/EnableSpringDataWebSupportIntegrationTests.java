@@ -153,10 +153,11 @@ class EnableSpringDataWebSupportIntegrationTests {
 		ApplicationContext context = WebTestUtils.createApplicationContext(SampleConfig.class);
 		var names = Arrays.asList(context.getBeanDefinitionNames());
 
-		assertThat(names).contains("pageableResolver", "sortResolver");
+		assertThat(names).contains("pageableResolver", "sortResolver", "offsetResolver");
 
 		assertResolversRegistered(context, SortHandlerMethodArgumentResolver.class,
-				PageableHandlerMethodArgumentResolver.class);
+				PageableHandlerMethodArgumentResolver.class,
+				OffsetScrollPositionHandlerMethodArgumentResolver.class);
 	}
 
 	@Test // DATACMNS-330
@@ -340,5 +341,25 @@ class EnableSpringDataWebSupportIntegrationTests {
 		var resolvers = adapter.getCustomArgumentResolvers();
 
 		Arrays.asList(resolverTypes).forEach(type -> assertThat(resolvers).hasAtLeastOneElementOfType(type));
+	}
+
+	@Test
+	void resolvesOffsetScrollPositionFromRequest() throws Exception {
+
+		var context = WebTestUtils.createApplicationContext(SampleConfig.class);
+		var mvc = MockMvcBuilders.webAppContextSetup(context).build();
+
+		mvc.perform(get("/offset?offset=5")).andExpect(status().isOk());
+		mvc.perform(get("/optional-offset?offset=5")).andExpect(status().isOk());
+	}
+
+	@Test
+	void resolvesOffsetScrollPositionWithCustomParameterName() throws Exception {
+
+		var context = WebTestUtils.createApplicationContext(OffsetResolverCustomizerConfig.class);
+		var mvc = MockMvcBuilders.webAppContextSetup(context).build();
+
+		mvc.perform(get("/offset?foo=5")).andExpect(status().isOk());
+		mvc.perform(get("/optional-offset?foo=5")).andExpect(status().isOk());
 	}
 }
