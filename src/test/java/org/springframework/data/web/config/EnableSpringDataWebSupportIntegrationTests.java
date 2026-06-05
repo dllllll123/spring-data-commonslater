@@ -55,7 +55,6 @@ import org.springframework.web.servlet.config.annotation.WebMvcConfigurationSupp
 import org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerAdapter;
 import org.springframework.web.util.UriComponentsBuilder;
 
-
 /**
  * Integration tests for {@link EnableSpringDataWebSupport}.
  *
@@ -153,10 +152,10 @@ class EnableSpringDataWebSupportIntegrationTests {
 		ApplicationContext context = WebTestUtils.createApplicationContext(SampleConfig.class);
 		var names = Arrays.asList(context.getBeanDefinitionNames());
 
-		assertThat(names).contains("pageableResolver", "sortResolver");
+		assertThat(names).contains("pageableResolver", "sortResolver", "offsetResolver");
 
 		assertResolversRegistered(context, SortHandlerMethodArgumentResolver.class,
-				PageableHandlerMethodArgumentResolver.class);
+				PageableHandlerMethodArgumentResolver.class, OffsetScrollPositionHandlerMethodArgumentResolver.class);
 	}
 
 	@Test // DATACMNS-330
@@ -272,6 +271,26 @@ class EnableSpringDataWebSupportIntegrationTests {
 
 		assertThat(names).contains("testOffsetResolverCustomizer");
 		assertThat((String) ReflectionTestUtils.getField(resolver, "offsetParameter")).isEqualTo("foo");
+	}
+
+	@Test
+	void resolvesOffsetScrollPositionHandlerMethodArgument() throws Exception {
+
+		var applicationContext = WebTestUtils.createApplicationContext(SampleConfig.class);
+		var mvc = MockMvcBuilders.webAppContextSetup(applicationContext).build();
+
+		mvc.perform(get("/offset").param("offset", "5"))
+				.andExpect(status().isOk());
+	}
+
+	@Test
+	void resolvesOffsetScrollPositionHandlerMethodArgumentUsingCustomizedParameterName() throws Exception {
+
+		var applicationContext = WebTestUtils.createApplicationContext(OffsetResolverCustomizerConfig.class);
+		var mvc = MockMvcBuilders.webAppContextSetup(applicationContext).build();
+
+		mvc.perform(get("/offset").param("foo", "5"))
+				.andExpect(status().isOk());
 	}
 
 	@Test // DATACMNS-1237
