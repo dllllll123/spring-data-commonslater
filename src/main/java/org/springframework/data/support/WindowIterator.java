@@ -157,6 +157,15 @@ public class WindowIterator<T> implements Iterator<T> {
 
 			return new WindowIterator<>(windowFunction, position);
 		}
+
+		/**
+		 * Create a {@link WindowIterator} starting at an offset initial position.
+		 *
+		 * @return
+		 */
+		public WindowIterator<T> startingAtOffset() {
+			return startingAt(ScrollPosition.offset());
+		}
 	}
 
 	private static class ReverseListIterator<T> implements Iterator<T> {
