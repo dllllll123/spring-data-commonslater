@@ -58,6 +58,47 @@ class WindowIteratorUnitTests {
 		verify(fkt).apply(ScrollPosition.offset());
 	}
 
+	@Test
+	void startsAtOffsetConvenienceMethodLoadsDataOnNext() {
+
+		Function<ScrollPosition, Window<String>> fkt = mock(Function.class);
+		WindowIterator<String> iterator = WindowIterator.of(fkt).startingAtOffset();
+		verifyNoInteractions(fkt);
+
+		when(fkt.apply(any())).thenReturn(Window.from(Collections.emptyList(), value -> ScrollPosition.offset()));
+
+		iterator.hasNext();
+		verify(fkt).apply(ScrollPosition.offset());
+	}
+
+	@Test
+	void startsAtOffsetConvenienceMethodBehavesSameAsExplicitOffset() {
+
+		Window<String> window1 = Window.from(List.of("a", "b"), ScrollPosition::offset, true);
+		Window<String> window2 = Window.from(List.of("c", "d"), value -> ScrollPosition.offset(2 + value));
+		
+		Function<ScrollPosition, Window<String>> function = it -> {
+			if (it.isInitial()) {
+				return window1;
+			}
+			return window2;
+		};
+
+		WindowIterator<String> iteratorExplicit = WindowIterator.of(function).startingAt(ScrollPosition.offset());
+		List<String> explicitResult = new ArrayList<>(4);
+		while (iteratorExplicit.hasNext()) {
+			explicitResult.add(iteratorExplicit.next());
+		}
+
+		WindowIterator<String> iteratorConvenience = WindowIterator.of(function).startingAtOffset();
+		List<String> convenienceResult = new ArrayList<>(4);
+		while (iteratorConvenience.hasNext()) {
+			convenienceResult.add(iteratorConvenience.next());
+		}
+
+		assertThat(convenienceResult).containsExactlyElementsOf(explicitResult);
+	}
+
 	@Test // GH-2151
 	void hasNextReturnsFalseIfNoDataAvailable() {
 
