@@ -30,8 +30,8 @@ import kotlin.reflect.jvm.javaGetter
  *
  * @since 4.1
  */
-fun <T : Any, P : Any, N : Any> PropertyReference<T, P>.then(next: KProperty1<T, P?>): TypedPropertyPath<T, N> {
-	val nextPath = KPropertyReference.of<T, P>(next) as PropertyReference<P, N>
+fun <T : Any, P : Any, N : Any> PropertyReference<T, P>.then(next: KProperty1<P, N?>): TypedPropertyPath<T, N> {
+	val nextPath = KPropertyReference.of<P, N>(next)
 	return TypedPropertyPaths.compose(this, nextPath)
 }
 
@@ -40,9 +40,18 @@ fun <T : Any, P : Any, N : Any> PropertyReference<T, P>.then(next: KProperty1<T,
  *
  * @since 4.1
  */
-fun <T : Any, P : Any, N : Any> PropertyReference<T, P>.then(next: KProperty<P?>): TypedPropertyPath<T, N> {
-	val nextPath = KPropertyReference.of<T, P>(next) as PropertyReference<P, N>
-	return TypedPropertyPaths.compose(this, nextPath)
+fun <T : Any, P : Any, N : Any> PropertyReference<T, P>.then(next: KProperty<N?>): TypedPropertyPath<T, N> {
+	val nextPath = KPropertyReference.of<Any, N>(next)
+	val currentType = type
+	val nextOwnerType = nextPath.owningType.type
+
+	if (!nextOwnerType.isAssignableFrom(currentType)) {
+		throw PropertyResolutionException(
+			"Property reference '${next.name}' must be declared on '${currentType.name}' or one of its supertypes but was declared on '${nextOwnerType.name}'"
+		)
+	}
+
+	return TypedPropertyPaths.compose(this, nextPath as PropertyReference<P, N>)
 }
 
 /**
@@ -61,7 +70,7 @@ class KPropertyReference {
 		 * Create a [PropertyReference] from a [KProperty1] reference.
 		 * @param property the property reference, must not be a property path.
 		 */
-		fun <T : Any, P : Any> of(property: KProperty1<T, P?>): PropertyReference<T, out P> {
+		fun <T : Any, P : Any> of(property: KProperty1<T, P?>): PropertyReference<T, P> {
 			return of((property as KProperty<P?>))
 		}
 
@@ -70,14 +79,14 @@ class KPropertyReference {
 		 * @param property the property reference, must not be a property path.
 		 */
 		@JvmName("ofMany")
-		fun <T : Any, P : Any> of(property: KProperty1<T, Iterable<P?>?>): PropertyReference<T, out P> {
+		fun <T : Any, P : Any> of(property: KProperty1<T, Iterable<P?>?>): PropertyReference<T, P> {
 			return of((property as KProperty<P?>))
 		}
 
 		/**
 		 * Create a [PropertyReference] from a [KProperty].
 		 */
-		fun <T : Any, P> of(property: KProperty<P?>): PropertyReference<T, out P> {
+		fun <T : Any, P> of(property: KProperty<P?>): PropertyReference<T, P> {
 
 			if (property is KPropertyPath<*, *>) {
 				throw PropertyResolutionException("Property reference '${property.toDotPath()}' must be a single property reference, not a property path")

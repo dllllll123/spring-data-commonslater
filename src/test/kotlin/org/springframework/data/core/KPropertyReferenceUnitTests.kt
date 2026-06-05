@@ -18,6 +18,7 @@ package org.springframework.data.core
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatExceptionOfType
 import org.junit.jupiter.api.Test
+import kotlin.reflect.KProperty
 
 /**
  * Unit tests for [KPropertyReference] and related functionality.
@@ -43,6 +44,25 @@ class KPropertyReferenceUnitTests {
 	}
 
 	@Test // GH-3400
+	fun shouldComposePropertyPathFromKProperty() {
+
+		val city: KProperty<String?> = Address::city
+		val path = KPropertyReference.of(Person::address).then(city)
+
+		assertThat(path.toDotPath()).isEqualTo("address.city")
+	}
+
+	@Test // GH-3400
+	fun shouldRejectKPropertyWithDifferentOwnerType() {
+
+		val countryName: KProperty<String?> = Country::name
+
+		assertThatExceptionOfType(PropertyResolutionException::class.java)
+			.isThrownBy { KPropertyReference.of(Person::address).then(countryName) }
+			.withMessageContaining("was declared on")
+	}
+
+	@Test // GH-3400
 	fun shouldComposeManyPropertyPath() {
 
 		val path = KPropertyReference.of(Person::addresses).then(Address::city)
@@ -61,7 +81,7 @@ class KPropertyReferenceUnitTests {
 			KPropertyReference.of(
 				Person::address / Address::city
 			)
-		}
+			}
 	}
 
 	class Person {
