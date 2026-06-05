@@ -1,0 +1,72 @@
+diff --git a/src/main/java/org/springframework/data/support/WindowIterator.java b/src/main/java/org/springframework/data/support/WindowIterator.java
+index 7535c999..d16c6d5e 100644
+--- a/src/main/java/org/springframework/data/support/WindowIterator.java
++++ b/src/main/java/org/springframework/data/support/WindowIterator.java
+@@ -157,6 +157,15 @@ public class WindowIterator<T> implements Iterator<T> {
+ 
+ 			return new WindowIterator<>(windowFunction, position);
+ 		}
++
++		/**
++		 * Create a {@link WindowIterator} starting at {@link ScrollPosition#offset()}.
++		 *
++		 * @return
++		 */
++		public WindowIterator<T> startingAtOffset() {
++			return startingAt(ScrollPosition.offset());
++		}
+ 	}
+ 
+ 	private static class ReverseListIterator<T> implements Iterator<T> {
+diff --git a/src/test/java/org/springframework/data/domain/WindowIteratorUnitTests.java b/src/test/java/org/springframework/data/domain/WindowIteratorUnitTests.java
+index 52dc3536..b728785d 100644
+--- a/src/test/java/org/springframework/data/domain/WindowIteratorUnitTests.java
++++ b/src/test/java/org/springframework/data/domain/WindowIteratorUnitTests.java
+@@ -154,4 +154,47 @@ class WindowIteratorUnitTests {
+ 		List<String> items = Streamable.of(() -> iterator).toList();
+ 		assertThat(items).containsExactly("d", "c", "b", "a");
+ 	}
++
++	@Test // GH-2151
++	void startingAtOffsetDoesNotLoadFirstWindowImmediately() {
++
++		Function<ScrollPosition, Window<String>> fkt = mock(Function.class);
++		WindowIterator<String> iterator = WindowIterator.of(fkt).startingAtOffset();
++		verifyNoInteractions(fkt);
++
++		when(fkt.apply(any())).thenReturn(Window.from(Collections.emptyList(), value -> ScrollPosition.offset()));
++
++		iterator.hasNext();
++		verify(fkt).apply(ScrollPosition.offset());
++	}
++
++	@Test // GH-2151
++	void startingAtOffsetAndExplicitOffsetProduceSameResults() {
++
++		Window<String> window1 = Window.from(List.of("a", "b"), ScrollPosition::offset, true);
++		Window<String> window2 = Window.from(List.of("c", "d"), value -> ScrollPosition.offset(2 + value));
++
++		Function<ScrollPosition, Window<String>> fkt = it -> {
++			if (it.isInitial()) {
++				return window1;
++			}
++			return window2;
++		};
++
++		WindowIterator<String> withOffset = WindowIterator.of(fkt).startingAt(ScrollPosition.offset());
++		WindowIterator<String> withOffsetMethod = WindowIterator.of(fkt).startingAtOffset();
++
++		List<String> result1 = new ArrayList<>(4);
++		while (withOffset.hasNext()) {
++			result1.add(withOffset.next());
++		}
++
++		List<String> result2 = new ArrayList<>(4);
++		while (withOffsetMethod.hasNext()) {
++			result2.add(withOffsetMethod.next());
++		}
++
++		assertThat(result1).containsExactly("a", "b", "c", "d");
++		assertThat(result2).isEqualTo(result1);
++	}
+ }
