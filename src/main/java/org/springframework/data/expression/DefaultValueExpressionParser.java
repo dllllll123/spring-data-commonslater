@@ -54,75 +54,103 @@ class DefaultValueExpressionParser implements ValueExpressionParser {
 	@Override
 	public ValueExpression parse(String expressionString) {
 
-		int placerholderIndex = expressionString.indexOf(PLACEHOLDER_PREFIX);
-		int expressionIndex = expressionString.indexOf(EXPRESSION_PREFIX);
+		int placeholderIndex = findNextPlaceholder(expressionString, 0);
+		int expressionIndex = findNextExpression(expressionString, 0);
 
-		if (placerholderIndex == -1 && expressionIndex == -1) {
-			return new LiteralValueExpression(expressionString);
+		if (placeholderIndex == -1 && expressionIndex == -1) {
+			return createLiteral(expressionString);
 		}
 
-		if (placerholderIndex != -1 && expressionIndex == -1
-				&& findPlaceholderEndIndex(expressionString, placerholderIndex) != expressionString.length()) {
+		if (placeholderIndex != -1 && expressionIndex == -1
+				&& findPlaceholderEndIndex(expressionString, placeholderIndex) != expressionString.length()) {
 			return createPlaceholder(expressionString);
 		}
 
-		if (placerholderIndex == -1
+		if (placeholderIndex == -1
 				&& findPlaceholderEndIndex(expressionString, expressionIndex) != expressionString.length()) {
 			return createExpression(expressionString);
 		}
 
-		return parseComposite(expressionString, placerholderIndex, expressionIndex);
+		return parseComposite(expressionString, placeholderIndex, expressionIndex);
 	}
 
-	private CompositeValueExpression parseComposite(String expressionString, int placerholderIndex, int expressionIndex) {
+	private CompositeValueExpression parseComposite(String expressionString, int initialPlaceholderIndex,
+			int initialExpressionIndex) {
 
 		List<ValueExpression> expressions = new ArrayList<>(PLACEHOLDER_PREFIX_LENGTH);
-		int startIndex = getStartIndex(placerholderIndex, expressionIndex);
+		int currentIndex = 0;
+		int placeholderIndex = initialPlaceholderIndex;
+		int expressionIndex = initialExpressionIndex;
 
-		if (startIndex != 0) {
-			expressions.add(new LiteralValueExpression(expressionString.substring(0, startIndex)));
-		}
+		while (true) {
 
-		while (startIndex != -1) {
+			int nextExpressionStart = getStartIndex(placeholderIndex, expressionIndex);
 
-			int endIndex = findPlaceholderEndIndex(expressionString, startIndex);
+			if (nextExpressionStart == -1) {
+				appendRemainingLiteral(expressions, expressionString, currentIndex);
+				break;
+			}
+
+			if (nextExpressionStart > currentIndex) {
+				appendLiteral(expressions, expressionString, currentIndex, nextExpressionStart);
+			}
+
+			int endIndex = findPlaceholderEndIndex(expressionString, nextExpressionStart);
 
 			if (endIndex == -1) {
-				throw new ParseException(expressionString, startIndex,
-						"No ending suffix '}' for expression starting at character %d: %s".formatted(startIndex,
-								expressionString.substring(startIndex)));
+				throw new ParseException(expressionString, nextExpressionStart,
+						"No ending suffix '}' for expression starting at character %d: %s".formatted(nextExpressionStart,
+								expressionString.substring(nextExpressionStart)));
 			}
 
-			int afterClosingParenthesisIndex = endIndex + 1;
-			String part = expressionString.substring(startIndex, afterClosingParenthesisIndex);
+			processExpressionSegment(expressions, expressionString, nextExpressionStart, endIndex);
 
-			if (part.startsWith(PLACEHOLDER_PREFIX)) {
-				expressions.add(createPlaceholder(part));
-			} else {
-				expressions.add(createExpression(part));
-			}
-
-			placerholderIndex = expressionString.indexOf(PLACEHOLDER_PREFIX, endIndex);
-			expressionIndex = expressionString.indexOf(EXPRESSION_PREFIX, endIndex);
-
-			startIndex = getStartIndex(placerholderIndex, expressionIndex);
-
-			if (startIndex == -1) {
-				// no next expression but we're capturing everything after the expression as literal.
-				expressions.add(new LiteralValueExpression(expressionString.substring(afterClosingParenthesisIndex)));
-			} else {
-				// capture literal after the expression ends and before the next starts.
-				expressions
-						.add(new LiteralValueExpression(expressionString.substring(afterClosingParenthesisIndex, startIndex)));
-			}
+			currentIndex = endIndex + 1;
+			placeholderIndex = findNextPlaceholder(expressionString, endIndex);
+			expressionIndex = findNextExpression(expressionString, endIndex);
 		}
 
 		return new CompositeValueExpression(expressionString, expressions);
 	}
 
-	private static int getStartIndex(int placerholderIndex, int expressionIndex) {
-		return placerholderIndex != -1 && expressionIndex != -1 ? Math.min(placerholderIndex, expressionIndex)
-				: placerholderIndex != -1 ? placerholderIndex : expressionIndex;
+	private int findNextPlaceholder(String expressionString, int fromIndex) {
+		return expressionString.indexOf(PLACEHOLDER_PREFIX, fromIndex);
+	}
+
+	private int findNextExpression(String expressionString, int fromIndex) {
+		return expressionString.indexOf(EXPRESSION_PREFIX, fromIndex);
+	}
+
+	private LiteralValueExpression createLiteral(String value) {
+		return new LiteralValueExpression(value);
+	}
+
+	private void appendRemainingLiteral(List<ValueExpression> expressions, String expressionString, int currentIndex) {
+		if (currentIndex < expressionString.length()) {
+			expressions.add(createLiteral(expressionString.substring(currentIndex)));
+		}
+	}
+
+	private void appendLiteral(List<ValueExpression> expressions, String expressionString, int from, int to) {
+		expressions.add(createLiteral(expressionString.substring(from, to)));
+	}
+
+	private void processExpressionSegment(List<ValueExpression> expressions, String expressionString, int startIndex,
+			int endIndex) {
+
+		int afterClosingParenthesisIndex = endIndex + 1;
+		String part = expressionString.substring(startIndex, afterClosingParenthesisIndex);
+
+		if (part.startsWith(PLACEHOLDER_PREFIX)) {
+			expressions.add(createPlaceholder(part));
+		} else {
+			expressions.add(createExpression(part));
+		}
+	}
+
+	private static int getStartIndex(int placeholderIndex, int expressionIndex) {
+		return placeholderIndex != -1 && expressionIndex != -1 ? Math.min(placeholderIndex, expressionIndex)
+				: placeholderIndex != -1 ? placeholderIndex : expressionIndex;
 	}
 
 	private PlaceholderExpression createPlaceholder(String part) {
