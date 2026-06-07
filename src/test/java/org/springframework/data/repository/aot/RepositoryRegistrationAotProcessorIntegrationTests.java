@@ -35,6 +35,7 @@ import org.springframework.data.aot.sample.ConfigWithQuerydslPredicateExecutor.P
 import org.springframework.data.aot.sample.ConfigWithSimpleCrudRepository;
 import org.springframework.data.aot.sample.ConfigWithTransactionManagerPresent;
 import org.springframework.data.aot.sample.ConfigWithTransactionManagerPresentAndAtComponentAnnotatedRepository;
+import org.springframework.data.aot.sample.CoroutineConfig;
 import org.springframework.data.aot.sample.QConfigWithQuerydslPredicateExecutor_Person;
 import org.springframework.data.aot.sample.ReactiveConfig;
 import org.springframework.data.domain.AbstractAggregateRoot;
@@ -312,6 +313,23 @@ public class RepositoryRegistrationAotProcessorIntegrationTests {
 		assertThatContribution(contribution).codeContributionSatisfies(it -> {
 			it.contributesReflectionFor(AbstractAggregateRoot.class);
 		});
+	}
+
+	@Test // GH-2593
+	void contributesKotlinCoroutineRepositoryReflectionHints() {
+
+		RepositoryRegistrationAotContribution repositoryBeanContribution = computeAotConfiguration(
+				CoroutineConfig.class).forRepository(CoroutineConfig.MyCoroutineRepo.class);
+
+		assertThatContribution(repositoryBeanContribution) //
+				.codeContributionSatisfies(contribution -> { //
+					contribution.contributesReflectionFor("kotlinx.coroutines.flow.Flow") //
+							.contributesReflectionFor("kotlin.Unit") //
+							.contributesReflectionFor("kotlin.Long") //
+							.contributesReflectionFor("kotlin.Boolean") //
+							.contributesReflectionFor("org.springframework.data.repository.kotlin.CoroutineCrudRepository") //
+							.contributesReflectionFor("kotlin.collections.Iterable");
+				});
 	}
 
 	AotUtil.RepositoryRegistrationAotContributionBuilder computeAotConfiguration(Class<?> configuration) {
