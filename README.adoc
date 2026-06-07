@@ -93,7 +93,7 @@ Building the documentation builds also the project without running tests.
 
 [source,bash]
 ----
- $ ./mvnw clean install -Pantora
+ $ ./mvnw clean install -Pantora -DskipTests
 ----
 
 The generated documentation is available from `target/site/index.html`.

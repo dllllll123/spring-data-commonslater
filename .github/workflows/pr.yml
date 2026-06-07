@@ -1,0 +1,23 @@
+name: PR Build
+
+on:
+  pull_request:
+    branches: [ main ]
+
+permissions: read-all
+
+jobs:
+  build-java:
+    strategy:
+      matrix:
+        java-version: [ base, main ]
+    name: Build project
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - name: Setup Java and Maven
+        uses: spring-projects/spring-data-build/actions/setup-maven@main
+        with:
+          java-version: ${{ matrix.java-version }}
+      - name: Build
+        run: ./mvnw clean compile test -Dtest=PageRequestUnitTests
