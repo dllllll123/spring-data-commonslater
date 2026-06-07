@@ -1,0 +1,55 @@
+diff --git a/src/test/java/org/springframework/data/repository/aot/RepositoryRegistrationAotProcessorIntegrationTests.java b/src/test/java/org/springframework/data/repository/aot/RepositoryRegistrationAotProcessorIntegrationTests.java
+index b506bb81..206136bd 100644
+--- a/src/test/java/org/springframework/data/repository/aot/RepositoryRegistrationAotProcessorIntegrationTests.java
++++ b/src/test/java/org/springframework/data/repository/aot/RepositoryRegistrationAotProcessorIntegrationTests.java
+@@ -25,6 +25,7 @@ import org.springframework.aop.framework.Advised;
+ import org.springframework.context.annotation.ComponentScan.Filter;
+ import org.springframework.context.annotation.FilterType;
+ import org.springframework.core.DecoratingProxy;
++import org.springframework.data.aot.sample.ConfigWithCoroutineCrudRepository;
+ import org.springframework.data.aot.sample.ConfigWithCustomImplementation;
+ import org.springframework.data.aot.sample.ConfigWithCustomRepositoryBaseClass;
+ import org.springframework.data.aot.sample.ConfigWithFragments;
+@@ -92,7 +93,7 @@ public class RepositoryRegistrationAotProcessorIntegrationTests {
+ 				.hasNoFragments() //
+ 				.codeContributionSatisfies(contribution -> { //
+ 					contribution.contributesReflectionFor(ConfigWithTransactionManagerPresent.MyTxRepo.class) // repository
+-																																																		// interface
++																																																			// interface
+ 							.contributesReflectionFor(PagingAndSortingRepository.class) // base repository
+ 							.contributesReflectionFor(ConfigWithTransactionManagerPresent.Person.class) // repository domain type
+ 
+@@ -219,6 +220,24 @@ public class RepositoryRegistrationAotProcessorIntegrationTests {
+ 				});
+ 	}
+ 
++	@Test
++	void contributesKotlinCoroutineRepositoryHints() {
++
++		RepositoryRegistrationAotContribution repositoryBeanContribution = computeAotConfiguration(
++				ConfigWithCoroutineCrudRepository.class)
++				.forRepository(ConfigWithCoroutineCrudRepository.MyCoroutineRepo.class);
++
++		assertThatContribution(repositoryBeanContribution) //
++				.targetRepositoryTypeIs(ConfigWithCoroutineCrudRepository.MyCoroutineRepo.class) //
++				.hasNoFragments() //
++				.codeContributionSatisfies(contribution -> { //
++					contribution.contributesReflectionFor(ConfigWithCoroutineCrudRepository.MyCoroutineRepo.class)
++							.contributesReflectionFor(ConfigWithCoroutineCrudRepository.Person.class)
++							.contributesReflectionFor("org.springframework.data.repository.kotlin.CoroutineCrudRepository",
++									"kotlinx.coroutines.flow.Flow", "kotlin.Unit", "kotlin.Long", "kotlin.Boolean");
++				});
++	}
++
+ 	@Test // GH-2593
+ 	void contributesRepositoryBaseClassCorrectly() {
+ 
+@@ -232,7 +251,7 @@ public class RepositoryRegistrationAotProcessorIntegrationTests {
+ 				.codeContributionSatisfies(contribution -> { //
+ 					// interface
+ 					contribution.contributesReflectionFor(SampleRepositoryFragmentsContributor.class) // repository structural
+-																																														// fragment
++																																																			// fragment
+ 							.contributesReflectionFor(ConfigWithCustomRepositoryBaseClass.CustomerRepositoryWithCustomBaseRepo.class) // repository
+ 							.contributesReflectionFor(ConfigWithCustomRepositoryBaseClass.RepoBaseClass.class) // base repo class
+ 							.contributesReflectionFor(ConfigWithCustomRepositoryBaseClass.Person.class); // repository domain type
