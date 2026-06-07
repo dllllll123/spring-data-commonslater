@@ -19,12 +19,16 @@ import static org.assertj.core.api.Assertions.*;
 
 import java.util.Collection;
 import java.util.Date;
+import java.util.Optional;
 
+import org.springframework.data.domain.OffsetScrollPosition;
 import org.springframework.data.web.ProjectedPayload;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.format.annotation.DateTimeFormat.ISO;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.ResponseBody;
 
 /**
  * @author Oliver Gierke
@@ -50,6 +54,22 @@ class SampleController {
 		assertThat(sampleDto.getBillingAddress().getCity()).isEqualTo("City");
 
 		return "view";
+	}
+
+	@RequestMapping("/offset")
+	@ResponseBody
+	String offset(OffsetScrollPosition offset) {
+
+		assertThat(offset).isNotNull();
+		return String.valueOf(offset.getOffset());
+	}
+
+	@RequestMapping("/offset-optional")
+	@ResponseBody
+	String offsetOptional(Optional<OffsetScrollPosition> offset) {
+
+		assertThat(offset).isNotNull();
+		return offset.map(o -> String.valueOf(o.getOffset())).orElse("none");
 	}
 
 	@ProjectedPayload

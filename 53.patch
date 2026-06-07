@@ -1,0 +1,150 @@
+diff --git a/src/main/java/org/springframework/data/web/config/SpringDataWebConfiguration.java b/src/main/java/org/springframework/data/web/config/SpringDataWebConfiguration.java
+index 7c882c32..c788c488 100644
+--- a/src/main/java/org/springframework/data/web/config/SpringDataWebConfiguration.java
++++ b/src/main/java/org/springframework/data/web/config/SpringDataWebConfiguration.java
+@@ -69,6 +69,7 @@ public class SpringDataWebConfiguration implements WebMvcConfigurer, BeanClassLo
+ 
+ 	private final Lazy<SortHandlerMethodArgumentResolver> sortResolver;
+ 	private final Lazy<PageableHandlerMethodArgumentResolver> pageableResolver;
++	private final Lazy<OffsetScrollPositionHandlerMethodArgumentResolver> offsetResolver;
+ 	private final Lazy<PageableHandlerMethodArgumentResolverCustomizer> pageableResolverCustomizer;
+ 	private final Lazy<SortHandlerMethodArgumentResolverCustomizer> sortResolverCustomizer;
+ 	private final Lazy<OffsetScrollPositionHandlerMethodArgumentResolverCustomizer> offsetResolverCustomizer;
+@@ -85,6 +86,8 @@ public class SpringDataWebConfiguration implements WebMvcConfigurer, BeanClassLo
+ 		this.sortResolver = Lazy.of(() -> context.getBean("sortResolver", SortHandlerMethodArgumentResolver.class));
+ 		this.pageableResolver = Lazy.of( //
+ 				() -> context.getBean("pageableResolver", PageableHandlerMethodArgumentResolver.class));
++		this.offsetResolver = Lazy.of( //
++				() -> context.getBean("offsetResolver", OffsetScrollPositionHandlerMethodArgumentResolver.class));
+ 		this.pageableResolverCustomizer = Lazy.of( //
+ 				() -> context.getBeanProvider(PageableHandlerMethodArgumentResolverCustomizer.class).getIfAvailable());
+ 		this.sortResolverCustomizer = Lazy.of( //
+@@ -144,6 +147,7 @@ public class SpringDataWebConfiguration implements WebMvcConfigurer, BeanClassLo
+ 
+ 		argumentResolvers.add(sortResolver.get());
+ 		argumentResolvers.add(pageableResolver.get());
++		argumentResolvers.add(offsetResolver.get());
+ 
+ 		ProxyingHandlerMethodArgumentResolver resolver = new ProxyingHandlerMethodArgumentResolver(conversionService, true);
+ 		resolver.setBeanFactory(context);
+diff --git a/src/test/java/org/springframework/data/web/config/EnableSpringDataWebSupportIntegrationTests.java b/src/test/java/org/springframework/data/web/config/EnableSpringDataWebSupportIntegrationTests.java
+index 6359a1d3..cc61f9e2 100755
+--- a/src/test/java/org/springframework/data/web/config/EnableSpringDataWebSupportIntegrationTests.java
++++ b/src/test/java/org/springframework/data/web/config/EnableSpringDataWebSupportIntegrationTests.java
+@@ -39,6 +39,7 @@ import org.springframework.data.querydsl.EntityPathResolver;
+ import org.springframework.data.querydsl.SimpleEntityPathResolver;
+ import org.springframework.data.querydsl.binding.QuerydslBindingsFactory;
+ import org.springframework.data.test.util.ClassPathExclusions;
++import org.springframework.data.domain.OffsetScrollPosition;
+ import org.springframework.data.web.OffsetScrollPositionHandlerMethodArgumentResolver;
+ import org.springframework.data.web.PageableHandlerMethodArgumentResolver;
+ import org.springframework.data.web.PagedResourcesAssemblerArgumentResolver;
+@@ -153,10 +154,11 @@ class EnableSpringDataWebSupportIntegrationTests {
+ 		ApplicationContext context = WebTestUtils.createApplicationContext(SampleConfig.class);
+ 		var names = Arrays.asList(context.getBeanDefinitionNames());
+ 
+-		assertThat(names).contains("pageableResolver", "sortResolver");
++		assertThat(names).contains("pageableResolver", "sortResolver", "offsetResolver");
+ 
+ 		assertResolversRegistered(context, SortHandlerMethodArgumentResolver.class,
+-				PageableHandlerMethodArgumentResolver.class);
++				PageableHandlerMethodArgumentResolver.class,
++				OffsetScrollPositionHandlerMethodArgumentResolver.class);
+ 	}
+ 
+ 	@Test // DATACMNS-330
+@@ -274,6 +276,50 @@ class EnableSpringDataWebSupportIntegrationTests {
+ 		assertThat((String) ReflectionTestUtils.getField(resolver, "offsetParameter")).isEqualTo("foo");
+ 	}
+ 
++	@Test
++	void resolvesOffsetScrollPositionFromRequest() throws Exception {
++
++		var applicationContext = WebTestUtils.createApplicationContext(SampleConfig.class);
++		var mvc = MockMvcBuilders.webAppContextSetup(applicationContext).build();
++
++		mvc.perform(get("/offset").param("offset", "5")) //
++				.andExpect(status().isOk()) //
++				.andExpect(content().string("5"));
++	}
++
++	@Test
++	void resolvesOffsetScrollPositionWithCustomParameterName() throws Exception {
++
++		var applicationContext = WebTestUtils.createApplicationContext(OffsetResolverCustomizerConfig.class);
++		var mvc = MockMvcBuilders.webAppContextSetup(applicationContext).build();
++
++		mvc.perform(get("/offset").param("foo", "10")) //
++				.andExpect(status().isOk()) //
++				.andExpect(content().string("10"));
++	}
++
++	@Test
++	void resolvesOptionalOffsetScrollPositionFromRequest() throws Exception {
++
++		var applicationContext = WebTestUtils.createApplicationContext(SampleConfig.class);
++		var mvc = MockMvcBuilders.webAppContextSetup(applicationContext).build();
++
++		mvc.perform(get("/offset-optional").param("offset", "7")) //
++				.andExpect(status().isOk()) //
++				.andExpect(content().string("7"));
++	}
++
++	@Test
++	void resolvesOptionalOffsetScrollPositionAbsent() throws Exception {
++
++		var applicationContext = WebTestUtils.createApplicationContext(SampleConfig.class);
++		var mvc = MockMvcBuilders.webAppContextSetup(applicationContext).build();
++
++		mvc.perform(get("/offset-optional")) //
++				.andExpect(status().isOk()) //
++				.andExpect(content().string("none"));
++	}
++
+ 	@Test // DATACMNS-1237
+ 	void configuresProxyingHandlerMethodArgumentResolver() {
+ 
+diff --git a/src/test/java/org/springframework/data/web/config/SampleController.java b/src/test/java/org/springframework/data/web/config/SampleController.java
+index 45d38abc..697201b5 100755
+--- a/src/test/java/org/springframework/data/web/config/SampleController.java
++++ b/src/test/java/org/springframework/data/web/config/SampleController.java
+@@ -19,12 +19,16 @@ import static org.assertj.core.api.Assertions.*;
+ 
+ import java.util.Collection;
+ import java.util.Date;
++import java.util.Optional;
+ 
++import org.springframework.data.domain.OffsetScrollPosition;
+ import org.springframework.data.web.ProjectedPayload;
+ import org.springframework.format.annotation.DateTimeFormat;
+ import org.springframework.format.annotation.DateTimeFormat.ISO;
++import org.springframework.http.ResponseEntity;
+ import org.springframework.stereotype.Controller;
+ import org.springframework.web.bind.annotation.RequestMapping;
++import org.springframework.web.bind.annotation.ResponseBody;
+ 
+ /**
+  * @author Oliver Gierke
+@@ -52,6 +56,22 @@ class SampleController {
+ 		return "view";
+ 	}
+ 
++	@RequestMapping("/offset")
++	@ResponseBody
++	String offset(OffsetScrollPosition offset) {
++
++		assertThat(offset).isNotNull();
++		return String.valueOf(offset.getOffset());
++	}
++
++	@RequestMapping("/offset-optional")
++	@ResponseBody
++	String offsetOptional(Optional<OffsetScrollPosition> offset) {
++
++		assertThat(offset).isNotNull();
++		return offset.map(o -> String.valueOf(o.getOffset())).orElse("none");
++	}
++
+ 	@ProjectedPayload
+ 	interface SampleDto {
+ 
