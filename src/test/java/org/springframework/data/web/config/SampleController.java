@@ -19,10 +19,14 @@ import static org.assertj.core.api.Assertions.*;
 
 import java.util.Collection;
 import java.util.Date;
+import java.util.Optional;
 
+import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.data.domain.OffsetScrollPosition;
 import org.springframework.data.web.ProjectedPayload;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.format.annotation.DateTimeFormat.ISO;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.RequestMapping;
 
@@ -50,6 +54,21 @@ class SampleController {
 		assertThat(sampleDto.getBillingAddress().getCity()).isEqualTo("City");
 
 		return "view";
+	}
+
+	@RequestMapping("/offset")
+	ResponseEntity<Long> offset(OffsetScrollPosition position) {
+		return ResponseEntity.ok(position.getOffset());
+	}
+
+	@RequestMapping("/optionalOffset")
+	ResponseEntity<Optional<Long>> optionalOffset(Optional<OffsetScrollPosition> position) {
+		return ResponseEntity.ok(position.map(OffsetScrollPosition::getOffset));
+	}
+
+	@RequestMapping("/qualifiedOffset")
+	ResponseEntity<Long> qualifiedOffset(@Qualifier("foo") OffsetScrollPosition position) {
+		return ResponseEntity.ok(position.getOffset());
 	}
 
 	@ProjectedPayload

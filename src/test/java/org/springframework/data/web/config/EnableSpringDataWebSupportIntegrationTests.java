@@ -153,10 +153,11 @@ class EnableSpringDataWebSupportIntegrationTests {
 		ApplicationContext context = WebTestUtils.createApplicationContext(SampleConfig.class);
 		var names = Arrays.asList(context.getBeanDefinitionNames());
 
-		assertThat(names).contains("pageableResolver", "sortResolver");
+		assertThat(names).contains("pageableResolver", "sortResolver", "offsetResolver");
 
 		assertResolversRegistered(context, SortHandlerMethodArgumentResolver.class,
-				PageableHandlerMethodArgumentResolver.class);
+				PageableHandlerMethodArgumentResolver.class,
+				OffsetScrollPositionHandlerMethodArgumentResolver.class);
 	}
 
 	@Test // DATACMNS-330
@@ -272,6 +273,50 @@ class EnableSpringDataWebSupportIntegrationTests {
 
 		assertThat(names).contains("testOffsetResolverCustomizer");
 		assertThat((String) ReflectionTestUtils.getField(resolver, "offsetParameter")).isEqualTo("foo");
+	}
+
+	@Test
+	void resolvesOffsetScrollPositionFromRequest() throws Exception {
+
+		var applicationContext = WebTestUtils.createApplicationContext(SampleConfig.class);
+		var mvc = MockMvcBuilders.webAppContextSetup(applicationContext).build();
+
+		mvc.perform(get("/offset?offset=5")) //
+				.andExpect(status().isOk()) //
+				.andExpect(jsonPath("$").value(5));
+	}
+
+	@Test
+	void resolvesOptionalOffsetScrollPositionFromRequest() throws Exception {
+
+		var applicationContext = WebTestUtils.createApplicationContext(SampleConfig.class);
+		var mvc = MockMvcBuilders.webAppContextSetup(applicationContext).build();
+
+		mvc.perform(get("/optionalOffset?offset=5")) //
+				.andExpect(status().isOk()) //
+				.andExpect(jsonPath("$").value(5));
+	}
+
+	@Test
+	void resolvesOptionalOffsetScrollPositionEmptyWhenNotProvided() throws Exception {
+
+		var applicationContext = WebTestUtils.createApplicationContext(SampleConfig.class);
+		var mvc = MockMvcBuilders.webAppContextSetup(applicationContext).build();
+
+		mvc.perform(get("/optionalOffset")) //
+				.andExpect(status().isOk()) //
+				.andExpect(content().string("null"));
+	}
+
+	@Test
+	void resolvesOffsetScrollPositionWithCustomParameterName() throws Exception {
+
+		var applicationContext = WebTestUtils.createApplicationContext(OffsetResolverCustomizerConfig.class);
+		var mvc = MockMvcBuilders.webAppContextSetup(applicationContext).build();
+
+		mvc.perform(get("/offset?foo=5")) //
+				.andExpect(status().isOk()) //
+				.andExpect(jsonPath("$").value(5));
 	}
 
 	@Test // DATACMNS-1237

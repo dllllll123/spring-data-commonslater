@@ -69,6 +69,7 @@ public class SpringDataWebConfiguration implements WebMvcConfigurer, BeanClassLo
 
 	private final Lazy<SortHandlerMethodArgumentResolver> sortResolver;
 	private final Lazy<PageableHandlerMethodArgumentResolver> pageableResolver;
+	private final Lazy<OffsetScrollPositionHandlerMethodArgumentResolver> offsetResolver;
 	private final Lazy<PageableHandlerMethodArgumentResolverCustomizer> pageableResolverCustomizer;
 	private final Lazy<SortHandlerMethodArgumentResolverCustomizer> sortResolverCustomizer;
 	private final Lazy<OffsetScrollPositionHandlerMethodArgumentResolverCustomizer> offsetResolverCustomizer;
@@ -85,6 +86,8 @@ public class SpringDataWebConfiguration implements WebMvcConfigurer, BeanClassLo
 		this.sortResolver = Lazy.of(() -> context.getBean("sortResolver", SortHandlerMethodArgumentResolver.class));
 		this.pageableResolver = Lazy.of( //
 				() -> context.getBean("pageableResolver", PageableHandlerMethodArgumentResolver.class));
+		this.offsetResolver = Lazy.of( //
+				() -> context.getBean("offsetResolver", OffsetScrollPositionHandlerMethodArgumentResolver.class));
 		this.pageableResolverCustomizer = Lazy.of( //
 				() -> context.getBeanProvider(PageableHandlerMethodArgumentResolverCustomizer.class).getIfAvailable());
 		this.sortResolverCustomizer = Lazy.of( //
@@ -144,6 +147,7 @@ public class SpringDataWebConfiguration implements WebMvcConfigurer, BeanClassLo
 
 		argumentResolvers.add(sortResolver.get());
 		argumentResolvers.add(pageableResolver.get());
+		argumentResolvers.add(offsetResolver.get());
 
 		ProxyingHandlerMethodArgumentResolver resolver = new ProxyingHandlerMethodArgumentResolver(conversionService, true);
 		resolver.setBeanFactory(context);
