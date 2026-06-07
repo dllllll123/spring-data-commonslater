@@ -1,0 +1,116 @@
+diff --git a/src/main/java/org/springframework/data/web/config/SpringDataWebConfiguration.java b/src/main/java/org/springframework/data/web/config/SpringDataWebConfiguration.java
+index 7c882c32..0492d5c5 100644
+--- a/src/main/java/org/springframework/data/web/config/SpringDataWebConfiguration.java
++++ b/src/main/java/org/springframework/data/web/config/SpringDataWebConfiguration.java
+@@ -72,6 +72,7 @@ public class SpringDataWebConfiguration implements WebMvcConfigurer, BeanClassLo
+ 	private final Lazy<PageableHandlerMethodArgumentResolverCustomizer> pageableResolverCustomizer;
+ 	private final Lazy<SortHandlerMethodArgumentResolverCustomizer> sortResolverCustomizer;
+ 	private final Lazy<OffsetScrollPositionHandlerMethodArgumentResolverCustomizer> offsetResolverCustomizer;
++	private final Lazy<OffsetScrollPositionHandlerMethodArgumentResolver> offsetResolver;
+ 
+ 	public SpringDataWebConfiguration(ApplicationContext context,
+ 			@Qualifier("mvcConversionService") ObjectFactory<ConversionService> conversionService) {
+@@ -92,6 +93,8 @@ public class SpringDataWebConfiguration implements WebMvcConfigurer, BeanClassLo
+ 		this.offsetResolverCustomizer = Lazy.of( //
+ 				() -> context.getBeanProvider(OffsetScrollPositionHandlerMethodArgumentResolverCustomizer.class)
+ 						.getIfAvailable());
++		this.offsetResolver = Lazy.of( //
++				() -> context.getBean("offsetResolver", OffsetScrollPositionHandlerMethodArgumentResolver.class));
+ 	}
+ 
+ 	@Override
+@@ -144,6 +147,7 @@ public class SpringDataWebConfiguration implements WebMvcConfigurer, BeanClassLo
+ 
+ 		argumentResolvers.add(sortResolver.get());
+ 		argumentResolvers.add(pageableResolver.get());
++		argumentResolvers.add(offsetResolver.get());
+ 
+ 		ProxyingHandlerMethodArgumentResolver resolver = new ProxyingHandlerMethodArgumentResolver(conversionService, true);
+ 		resolver.setBeanFactory(context);
+diff --git a/src/test/java/org/springframework/data/web/config/EnableSpringDataWebSupportIntegrationTests.java b/src/test/java/org/springframework/data/web/config/EnableSpringDataWebSupportIntegrationTests.java
+index 6359a1d3..a6ef86ae 100755
+--- a/src/test/java/org/springframework/data/web/config/EnableSpringDataWebSupportIntegrationTests.java
++++ b/src/test/java/org/springframework/data/web/config/EnableSpringDataWebSupportIntegrationTests.java
+@@ -274,6 +274,40 @@ class EnableSpringDataWebSupportIntegrationTests {
+ 		assertThat((String) ReflectionTestUtils.getField(resolver, "offsetParameter")).isEqualTo("foo");
+ 	}
+ 
++	@Test
++	void resolvesOffsetScrollPosition() throws Exception {
++
++		ApplicationContext context = WebTestUtils.createApplicationContext(SampleConfig.class);
++		var mvc = MockMvcBuilders.webAppContextSetup(context).build();
++
++		mvc.perform(get("/offset?offset=5")) //
++				.andExpect(status().isOk()) //
++				.andExpect(content().string("5"));
++
++		mvc.perform(get("/offset")) //
++				.andExpect(status().isOk()) //
++				.andExpect(content().string("null"));
++
++		mvc.perform(get("/optional-offset?offset=5")) //
++				.andExpect(status().isOk()) //
++				.andExpect(content().string("5"));
++
++		mvc.perform(get("/optional-offset")) //
++				.andExpect(status().isOk()) //
++				.andExpect(content().string("empty"));
++	}
++
++	@Test
++	void resolvesOffsetScrollPositionWithCustomizer() throws Exception {
++
++		ApplicationContext context = WebTestUtils.createApplicationContext(OffsetResolverCustomizerConfig.class);
++		var mvc = MockMvcBuilders.webAppContextSetup(context).build();
++
++		mvc.perform(get("/offset?foo=5")) //
++				.andExpect(status().isOk()) //
++				.andExpect(content().string("5"));
++	}
++
+ 	@Test // DATACMNS-1237
+ 	void configuresProxyingHandlerMethodArgumentResolver() {
+ 
+diff --git a/src/test/java/org/springframework/data/web/config/SampleController.java b/src/test/java/org/springframework/data/web/config/SampleController.java
+index 45d38abc..e3f543e8 100755
+--- a/src/test/java/org/springframework/data/web/config/SampleController.java
++++ b/src/test/java/org/springframework/data/web/config/SampleController.java
+@@ -20,11 +20,15 @@ import static org.assertj.core.api.Assertions.*;
+ import java.util.Collection;
+ import java.util.Date;
+ 
++import org.springframework.data.domain.OffsetScrollPosition;
+ import org.springframework.data.web.ProjectedPayload;
+ import org.springframework.format.annotation.DateTimeFormat;
+ import org.springframework.format.annotation.DateTimeFormat.ISO;
+ import org.springframework.stereotype.Controller;
+ import org.springframework.web.bind.annotation.RequestMapping;
++import org.springframework.web.bind.annotation.ResponseBody;
++
++import java.util.Optional;
+ 
+ /**
+  * @author Oliver Gierke
+@@ -52,7 +56,21 @@ class SampleController {
+ 		return "view";
+ 	}
+ 
++	@RequestMapping("/offset")
++	@ResponseBody
++	String offsetMethod(OffsetScrollPosition offset) {
++		if (offset == null) return "null";
++		return offset.isInitial() ? "initial" : Long.toString(offset.getOffset());
++	}
++
++	@RequestMapping("/optional-offset")
++	@ResponseBody
++	String optionalOffsetMethod(Optional<OffsetScrollPosition> offset) {
++		return offset.map(o -> o.isInitial() ? "initial" : Long.toString(o.getOffset())).orElse("empty");
++	}
++
+ 	@ProjectedPayload
++
+ 	interface SampleDto {
+ 
+ 		String getName();

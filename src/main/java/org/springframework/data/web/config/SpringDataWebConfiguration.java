@@ -72,6 +72,7 @@ public class SpringDataWebConfiguration implements WebMvcConfigurer, BeanClassLo
 	private final Lazy<PageableHandlerMethodArgumentResolverCustomizer> pageableResolverCustomizer;
 	private final Lazy<SortHandlerMethodArgumentResolverCustomizer> sortResolverCustomizer;
 	private final Lazy<OffsetScrollPositionHandlerMethodArgumentResolverCustomizer> offsetResolverCustomizer;
+	private final Lazy<OffsetScrollPositionHandlerMethodArgumentResolver> offsetResolver;
 
 	public SpringDataWebConfiguration(ApplicationContext context,
 			@Qualifier("mvcConversionService") ObjectFactory<ConversionService> conversionService) {
@@ -92,6 +93,8 @@ public class SpringDataWebConfiguration implements WebMvcConfigurer, BeanClassLo
 		this.offsetResolverCustomizer = Lazy.of( //
 				() -> context.getBeanProvider(OffsetScrollPositionHandlerMethodArgumentResolverCustomizer.class)
 						.getIfAvailable());
+		this.offsetResolver = Lazy.of( //
+				() -> context.getBean("offsetResolver", OffsetScrollPositionHandlerMethodArgumentResolver.class));
 	}
 
 	@Override
@@ -144,6 +147,7 @@ public class SpringDataWebConfiguration implements WebMvcConfigurer, BeanClassLo
 
 		argumentResolvers.add(sortResolver.get());
 		argumentResolvers.add(pageableResolver.get());
+		argumentResolvers.add(offsetResolver.get());
 
 		ProxyingHandlerMethodArgumentResolver resolver = new ProxyingHandlerMethodArgumentResolver(conversionService, true);
 		resolver.setBeanFactory(context);

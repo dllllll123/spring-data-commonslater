@@ -274,6 +274,40 @@ class EnableSpringDataWebSupportIntegrationTests {
 		assertThat((String) ReflectionTestUtils.getField(resolver, "offsetParameter")).isEqualTo("foo");
 	}
 
+	@Test
+	void resolvesOffsetScrollPosition() throws Exception {
+
+		ApplicationContext context = WebTestUtils.createApplicationContext(SampleConfig.class);
+		var mvc = MockMvcBuilders.webAppContextSetup(context).build();
+
+		mvc.perform(get("/offset?offset=5")) //
+				.andExpect(status().isOk()) //
+				.andExpect(content().string("5"));
+
+		mvc.perform(get("/offset")) //
+				.andExpect(status().isOk()) //
+				.andExpect(content().string("null"));
+
+		mvc.perform(get("/optional-offset?offset=5")) //
+				.andExpect(status().isOk()) //
+				.andExpect(content().string("5"));
+
+		mvc.perform(get("/optional-offset")) //
+				.andExpect(status().isOk()) //
+				.andExpect(content().string("empty"));
+	}
+
+	@Test
+	void resolvesOffsetScrollPositionWithCustomizer() throws Exception {
+
+		ApplicationContext context = WebTestUtils.createApplicationContext(OffsetResolverCustomizerConfig.class);
+		var mvc = MockMvcBuilders.webAppContextSetup(context).build();
+
+		mvc.perform(get("/offset?foo=5")) //
+				.andExpect(status().isOk()) //
+				.andExpect(content().string("5"));
+	}
+
 	@Test // DATACMNS-1237
 	void configuresProxyingHandlerMethodArgumentResolver() {
 
