@@ -1,0 +1,31 @@
+diff --git a/.github/workflows/pr-validation.yml b/.github/workflows/pr-validation.yml
+new file mode 100644
+index 0000000..e8a3c7f
+--- /dev/null
++++ b/.github/workflows/pr-validation.yml
+@@ -0,0 +1,25 @@
++name: PR Validation
++
++on:
++  workflow_dispatch:
++  pull_request:
++    branches: [ main, 'issue/**' ]
++
++permissions: read-all
++
++jobs:
++  validate-java:
++    name: Validate project
++    runs-on: ubuntu-latest
++    steps:
++      - uses: actions/checkout@v6
++      - name: Setup Java and Maven
++        uses: spring-projects/spring-data-build/actions/setup-maven@main
++        with:
++          java-version: base
++      - name: Compile
++        uses: spring-projects/spring-data-build/actions/maven-build@main
++        with:
++          goals: 'compile'
++      - name: Run single test
++        run: ./mvnw test -Dtest=org.springframework.data.util.StreamUtilsTests -DfailIfNoTests=false -q
