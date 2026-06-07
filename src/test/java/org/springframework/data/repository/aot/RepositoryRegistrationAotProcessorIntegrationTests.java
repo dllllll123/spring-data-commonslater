@@ -318,6 +318,34 @@ public class RepositoryRegistrationAotProcessorIntegrationTests {
 		return AotUtil.contributionFor(configuration);
 	}
 
+	@Test
+	void registersReflectionForKotlinCoroutineRepository() {
+
+		RepositoryRegistrationAotContribution contribution = computeAotConfiguration(CoroutineConfiguration.class)
+				.forRepository(CoroutineConfiguration.CoroutineSampleRepository.class);
+
+		assertThatContribution(contribution).codeContributionSatisfies(it -> {
+			it.contributesReflectionFor(
+					"org.springframework.data.repository.kotlin.CoroutineCrudRepository",
+					"kotlinx.coroutines.flow.Flow",
+					"kotlin.collections.Iterable",
+					"kotlin.Unit",
+					"kotlin.Long",
+					"kotlin.Boolean"
+			);
+			it.contributesReflectionFor(Repository.class, Iterable.class);
+		});
+	}
+
+	@EnableRepositories(includeFilters = { @Filter(type = FilterType.ASSIGNABLE_TYPE,
+			value = CoroutineConfiguration.CoroutineSampleRepository.class) }, considerNestedRepositories = true)
+	public class CoroutineConfiguration {
+
+		static class Sample {}
+
+		interface CoroutineSampleRepository extends org.springframework.data.repository.kotlin.CoroutineCrudRepository<Sample, Long> {}
+	}
+
 	@EnableRepositories(includeFilters = { @Filter(type = FilterType.ASSIGNABLE_TYPE, value = SampleRepository.class) },
 			considerNestedRepositories = true)
 	public class EventPublicationConfiguration {
