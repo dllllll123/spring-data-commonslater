@@ -25,6 +25,7 @@ import org.springframework.aop.framework.Advised;
 import org.springframework.context.annotation.ComponentScan.Filter;
 import org.springframework.context.annotation.FilterType;
 import org.springframework.core.DecoratingProxy;
+import org.springframework.data.aot.sample.ConfigWithCoroutineCrudRepository;
 import org.springframework.data.aot.sample.ConfigWithCustomImplementation;
 import org.springframework.data.aot.sample.ConfigWithCustomRepositoryBaseClass;
 import org.springframework.data.aot.sample.ConfigWithFragments;
@@ -312,6 +313,25 @@ public class RepositoryRegistrationAotProcessorIntegrationTests {
 		assertThatContribution(contribution).codeContributionSatisfies(it -> {
 			it.contributesReflectionFor(AbstractAggregateRoot.class);
 		});
+	}
+
+	@Test // GH-2593
+	void contributesCoroutineRepositoryCorrectly() {
+
+		RepositoryRegistrationAotContribution repositoryBeanContribution = computeAotConfiguration(
+				ConfigWithCoroutineCrudRepository.class).forRepository(ConfigWithCoroutineCrudRepository.MyCoRepo.class);
+
+		assertThatContribution(repositoryBeanContribution) //
+				.targetRepositoryTypeIs(ConfigWithCoroutineCrudRepository.MyCoRepo.class) //
+				.hasNoFragments() //
+				.codeContributionSatisfies(contribution -> { //
+					contribution.contributesReflectionFor(ConfigWithCoroutineCrudRepository.MyCoRepo.class) //
+							.contributesReflectionFor(ConfigWithCoroutineCrudRepository.Person.class) //
+							.contributesReflectionFor("kotlinx.coroutines.flow.Flow") //
+							.contributesReflectionFor("kotlin.Unit") //
+							.contributesReflectionFor("kotlin.Long") //
+							.contributesReflectionFor("kotlin.Boolean");
+				});
 	}
 
 	AotUtil.RepositoryRegistrationAotContributionBuilder computeAotConfiguration(Class<?> configuration) {

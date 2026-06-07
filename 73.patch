@@ -1,0 +1,38 @@
+diff --git a/src/test/java/org/springframework/data/repository/aot/RepositoryRegistrationAotProcessorIntegrationTests.java b/src/test/java/org/springframework/data/repository/aot/RepositoryRegistrationAotProcessorIntegrationTests.java
+index b506bb81..98d0410a 100644
+--- a/src/test/java/org/springframework/data/repository/aot/RepositoryRegistrationAotProcessorIntegrationTests.java
++++ b/src/test/java/org/springframework/data/repository/aot/RepositoryRegistrationAotProcessorIntegrationTests.java
+@@ -25,6 +25,7 @@ import org.springframework.aop.framework.Advised;
+ import org.springframework.context.annotation.ComponentScan.Filter;
+ import org.springframework.context.annotation.FilterType;
+ import org.springframework.core.DecoratingProxy;
++import org.springframework.data.aot.sample.ConfigWithCoroutineCrudRepository;
+ import org.springframework.data.aot.sample.ConfigWithCustomImplementation;
+ import org.springframework.data.aot.sample.ConfigWithCustomRepositoryBaseClass;
+ import org.springframework.data.aot.sample.ConfigWithFragments;
+@@ -314,6 +315,25 @@ public class RepositoryRegistrationAotProcessorIntegrationTests {
+ 		});
+ 	}
+ 
++	@Test // GH-2593
++	void contributesCoroutineRepositoryCorrectly() {
++
++		RepositoryRegistrationAotContribution repositoryBeanContribution = computeAotConfiguration(
++				ConfigWithCoroutineCrudRepository.class).forRepository(ConfigWithCoroutineCrudRepository.MyCoRepo.class);
++
++		assertThatContribution(repositoryBeanContribution) //
++				.targetRepositoryTypeIs(ConfigWithCoroutineCrudRepository.MyCoRepo.class) //
++				.hasNoFragments() //
++				.codeContributionSatisfies(contribution -> { //
++					contribution.contributesReflectionFor(ConfigWithCoroutineCrudRepository.MyCoRepo.class) //
++							.contributesReflectionFor(ConfigWithCoroutineCrudRepository.Person.class) //
++							.contributesReflectionFor("kotlinx.coroutines.flow.Flow") //
++							.contributesReflectionFor("kotlin.Unit") //
++							.contributesReflectionFor("kotlin.Long") //
++							.contributesReflectionFor("kotlin.Boolean");
++				});
++	}
++
+ 	AotUtil.RepositoryRegistrationAotContributionBuilder computeAotConfiguration(Class<?> configuration) {
+ 		return AotUtil.contributionFor(configuration);
+ 	}
